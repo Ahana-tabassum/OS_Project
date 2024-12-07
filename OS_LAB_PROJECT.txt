@@ -1,0 +1,321 @@
+#!/bin/bash
+
+# First-Come, First-Served (FCFS) Scheduling
+fcfsScheduling() {
+    echo "Enter the number of processes:"
+    read n
+
+    local -a at_arr  # Arrival time array
+    local -a bt_arr  # Burst time array
+
+    echo "Enter the Arrival Time and Burst Time for each process (space-separated):"
+    for ((i=0; i<n; i++)); do
+        echo "Process $((i + 1)):"
+        read at bt
+        at_arr[i]=$at
+        bt_arr[i]=$bt
+    done
+
+    local -a ct_arr=()  # Completion time array
+    local -a tat_arr=()  # Turnaround time array
+    local -a wt_arr=()  # Waiting time array
+
+    ct_arr[0]=$((at_arr[0] + bt_arr[0]))
+    for ((i=1; i<n; i++)); do
+        if ((at_arr[i] > ct_arr[i-1])); then
+            ct_arr[i]=$((at_arr[i] + bt_arr[i]))
+        else
+            ct_arr[i]=$((ct_arr[i-1] + bt_arr[i]))
+        fi
+    done
+
+    local total_tat=0
+    local total_wt=0
+
+    for ((i=0; i<n; i++)); do
+        tat_arr[i]=$((ct_arr[i] - at_arr[i]))
+        wt_arr[i]=$((tat_arr[i] - bt_arr[i]))
+        total_tat=$((total_tat + tat_arr[i]))
+        total_wt=$((total_wt + wt_arr[i]))
+    done
+
+    echo -e "\nProcesses\tAT\tBT\tCT\tTAT\tWT"
+    for ((i=0; i<n; i++)); do
+        echo -e "$i\t\t${at_arr[i]}\t${bt_arr[i]}\t${ct_arr[i]}\t${tat_arr[i]}\t${wt_arr[i]}"
+    done
+
+    echo -e "\nAverage Turnaround Time = $(bc <<< "scale=2; $total_tat/$n")"
+    echo "Average Waiting Time = $(bc <<< "scale=2; $total_wt/$n")"
+}
+
+# Non-Preemptive Shortest Job First (SJF) Scheduling
+sjfScheduling() {
+    echo "Enter the number of processes:"
+    read n
+
+    local -a arrival_time=()  # Arrival time array
+    local -a burst_time=()     # Burst time array
+
+    echo "Enter the Arrival Time and Burst Time for each process (space-separated):"
+    for ((i=0; i<n; i++)); do
+        echo "Process $((i + 1)):"
+        read at bt
+        arrival_time[i]=$at
+        burst_time[i]=$bt
+    done
+
+    local -a ct=()  # Completion time array
+    local -a tat=() # Turnaround time array
+    local -a wt=()  # Waiting time array
+    local is_completed=()
+    for ((i=0; i<n; i++)); do is_completed[i]=0; done
+
+    local current_time=0
+    local completed=0
+    local total_tat=0
+    local total_wt=0
+
+    while ((completed < n)); do
+        local min_burst=99999
+        local index=-1
+
+        for ((i=0; i<n; i++)); do
+            if ((arrival_time[i] <= current_time && is_completed[i] == 0)); then
+                if ((burst_time[i] < min_burst)); then
+                    min_burst=${burst_time[i]}
+                    index=$i
+                fi
+            fi
+        done
+
+        if ((index != -1)); then
+            ct[index]=$((current_time + burst_time[index]))
+            tat[index]=$((ct[index] - arrival_time[index]))
+            wt[index]=$((tat[index] - burst_time[index]))
+            total_tat=$((total_tat + tat[index]))
+            total_wt=$((total_wt + wt[index]))
+            current_time=${ct[index]}
+            is_completed[index]=1
+            completed=$((completed + 1))
+        else
+            current_time=$((current_time + 1))
+        fi
+    done
+
+    echo -e "\nProcesses\tAT\tBT\tCT\tTAT\tWT"
+ for ((i=0; i<n; i++)); do
+        echo -e "$i\t\t${arrival_time[i]}\t${burst_time[i]}\t${ct[i]}\t${tat[i]}\t${wt[i]}"
+    done
+
+    echo -e "\nAverage Turnaround Time = $(bc <<< "scale=2; $total_tat/$n")"
+    echo "Average Waiting Time = $(bc <<< "scale=2; $total_wt/$n")"
+}
+
+# Preemptive Shortest Job First (SJF) Scheduling
+preemptiveSjfScheduling() {
+    echo "Enter the number of processes:"
+    read n
+
+    local -a arrival_time=()  # Arrival time array
+    local -a burst_time=()     # Burst time array
+
+    echo "Enter the Arrival Time and Burst Time for each process (space-separated):"
+    for ((i=0; i<n; i++)); do
+        echo "Process $((i + 1)):"
+        read at bt
+        arrival_time[i]=$at
+        burst_time[i]=$bt
+    done
+
+    local -a ct=()  # Completion time array
+    local -a tat=() # Turnaround time array
+    local -a wt=()  # Waiting time array
+    local is_completed=()
+    for ((i=0; i<n; i++)); do is_completed[i]=0; done
+
+    local current_time=0
+    local completed=0
+    local total_tat=0
+    local total_wt=0
+
+    while ((completed < n)); do
+        local min_burst=99999
+        local index=-1
+
+        for ((i=0; i<n; i++)); do
+            if ((arrival_time[i] <= current_time && is_completed[i] == 0)); then
+                if ((burst_time[i] < min_burst)); then
+                    min_burst=${burst_time[i]}
+                    index=$i
+                fi
+            fi
+        done
+
+        if ((index != -1)); then
+            burst_time[index]=$((burst_time[index] - 1))
+            if ((burst_time[index] == 0)); then
+                ct[index]=$((current_time + 1))
+                tat[index]=$((ct[index] - arrival_time[index]))
+                wt[index]=$((tat[index] - burst_time[index]))
+                total_tat=$((total_tat + tat[index]))
+                total_wt=$((total_wt + wt[index]))
+                is_completed[index]=1
+                completed=$((completed + 1))
+            fi
+        fi
+        current_time=$((current_time + 1))
+    done
+
+    echo -e "\nProcesses\tAT\tBT\tCT\tTAT\tWT"
+    for ((i=0; i<n; i++)); do
+        echo -e "$i\t\t${arrival_time[i]}\t${burst_time[i]}\t${ct[i]}\t${tat[i]}\t${wt[i]}"
+    done
+
+    echo -e "\nAverage Turnaround Time = $(bc <<< "scale=2; $total_tat/$n")"
+    echo "Average Waiting Time = $(bc <<< "scale=2; $total_wt/$n")"
+}
+
+# Round Robin Scheduling
+roundRobinScheduling() {
+    echo "Enter the number of processes:"
+    read n
+
+    local -a arrival_time=()  # Arrival time array
+    local -a burst_time=()     # Burst time array
+    local -a remaining_time=() # Remaining time array
+
+    echo "Enter the Arrival Time and Burst Time for each process (space-separated):"
+    for ((i=0; i<n; i++)); do
+        echo "Process $((i + 1)):"
+        read at bt
+        arrival_time[i]=$at
+        burst_time[i]=$bt
+        remaining_time[i]=$bt
+    done
+
+    echo "Enter the time quantum:"
+    read quantum
+
+    local -a ct=()  # Completion time array
+    local total_tat=0
+    local total_wt=0
+    local current_time=0
+    local completed=0
+
+    while ((completed < n)); do
+        for ((i=0; i<n; i++)); do
+            if ((arrival_time[i] <= current_time && remaining_time[i] > 0)); then
+                if ((remaining_time[i] > quantum)); then
+                    current_time=$((current_time + quantum))
+                    remaining_time[i]=$((remaining_time[i] - quantum))
+                else
+                    current_time=$((current_time + remaining_time[i]))
+                    ct[i]=$current_time
+                    total_tat=$((total_tat + (ct[i] - arrival_time[i])))
+                    total_wt=$((total_wt + (ct[i] - arrival_time[i] - burst_time[i])))
+                    remaining_time[i]=0
+                    completed=$((completed + 1))
+                fi
+            fi
+        done
+    done
+
+    echo -e "\nProcesses\tAT\tBT\tCT\tTAT\tWT"
+    for ((i=0; i<n; i++)); do
+        # Calculate TAT and WT for output
+        tat=$((ct[i] - arrival_time[i]))
+        wt=$((tat - burst_time[i]))
+        echo -e "$i\t\t${arrival_time[i]}\t${burst_time[i]}\t${ct[i]}\t$tat\t$wt"
+    done
+
+    echo -e "\nAverage Turnaround Time = $(bc <<< "scale=2; $total_tat/$n")"
+    echo "Average Waiting Time = $(bc <<< "scale=2; $total_wt/$n")"
+}
+
+
+# Priority Scheduling
+priorityScheduling() {
+    echo "Enter the number of processes:"
+    read n
+
+    local -a arrival_time=()  # Arrival time array
+    local -a burst_time=()     # Burst time array
+    local -a priority=()       # Priority array
+
+    echo "Enter the Arrival Time, Burst Time, and Priority for each process (space-separated):"
+    for ((i=0; i<n; i++)); do
+        echo "Process $((i + 1)):"
+        read at bt pr
+        arrival_time[i]=$at
+        burst_time[i]=$bt
+        priority[i]=$pr
+    done
+
+    local -a ct=()  # Completion time array
+    local -a tat=() # Turnaround time array
+    local -a wt=()  # Waiting time array
+    local is_completed=()
+    for ((i=0; i<n; i++)); do is_completed[i]=0; done
+
+    local current_time=0
+    local completed=0
+    local total_tat=0
+    local total_wt=0
+
+    while ((completed < n)); do
+        local highest_priority=99999
+        local index=-1
+
+        for ((i=0; i<n; i++)); do
+            if ((arrival_time[i] <= current_time && is_completed[i] == 0)); then
+                if ((priority[i] < highest_priority)); then
+                    highest_priority=${priority[i]}
+                    index=$i
+                fi
+            fi
+        done
+
+        if ((index != -1)); then
+            ct[index]=$((current_time + burst_time[index]))
+            tat[index]=$((ct[index] - arrival_time[index]))
+            wt[index]=$((tat[index] - burst_time[index]))
+            total_tat=$((total_tat + tat[index]))
+            total_wt=$((total_wt + wt[index]))
+            current_time=${ct[index]}
+            is_completed[index]=1
+            completed=$((completed + 1))
+        else
+            current_time=$((current_time + 1))
+        fi
+    done
+
+    echo -e "\nProcesses\tAT\tBT\tCT\tTAT\tWT"
+    for ((i=0; i<n; i++)); do
+        echo -e "$i\t\t${arrival_time[i]}\t${burst_time[i]}\t${ct[i]}\t${tat[i]}\t${wt[i]}"
+    done
+
+    echo -e "\nAverage Turnaround Time = $(bc <<< "scale=2; $total_tat/$n")"
+    echo "Average Waiting Time = $(bc <<< "scale=2; $total_wt/$n")"
+}
+
+# Main function to call scheduling algorithms
+main() {
+    echo "Choose the scheduling algorithm:"
+    echo "1. FCFS"
+    echo "2. Non-Preemptive SJF"
+    echo "3. Preemptive SJF"
+    echo "4. Round Robin"
+    echo "5. Priority Scheduling"
+    read choice
+
+    case $choice in
+        1) fcfsScheduling ;;
+        2) sjfScheduling ;;
+        3) preemptiveSjfScheduling ;;
+        4) roundRobinScheduling ;;
+        5) priorityScheduling ;;
+        *) echo "Invalid choice!" ;;
+    esac
+}
+
+main
